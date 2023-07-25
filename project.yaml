@@ -43,13 +43,13 @@ actions:
         skim: output/extract/skim_*.txt
         flowchart: output/extract/flowchart_*.csv
         
-  exploratory_analysis:
-    run: r:latest analysis/exploratory_analysis.R
-    needs: 
-    - process_extract
-    outputs:
-      moderately_sensitive:
-        data_vax_counts: output/exploratory/data_vax_counts_midpoint6.csv
-        group_counts: output/exploratory/group_counts_midpoint6.csv
-        freqpoly: output/exploratory/vax_dates_freqpoly.png
-        line: output/exploratory/vax_dates_line.png
+  # exploratory_analysis:
+  #   run: r:latest analysis/exploratory_analysis.R
+  #   needs: 
+  #   - process_extract
+  #   outputs:
+  #     moderately_sensitive:
+  #       data_vax_counts: output/exploratory/data_vax_counts_midpoint6.csv
+  #       group_counts: output/exploratory/group_counts_midpoint6.csv
+  #       freqpoly: output/exploratory/vax_dates_freqpoly.png
+  #       line: output/exploratory/vax_dates_line.png
