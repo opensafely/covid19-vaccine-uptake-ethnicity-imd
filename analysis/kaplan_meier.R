@@ -1,3 +1,5 @@
+# code for the main analysis using Kaplan-Meier estimates ----------------------
+
 # the following code does not calculate Kaplan-Meier estimates, 
 # but I've put it here for now as it will be useful for the groupings
 
