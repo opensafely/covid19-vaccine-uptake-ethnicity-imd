@@ -16,6 +16,7 @@ fs::dir_create(outdir)
 # Source metadata and functions
 source(here("analysis", "design.R"))
 source(here("analysis", "functions", "utility.R"))
+source(here("analysis", "functions", "processing.R"))
 
 # Import the data 
 data_eligible <- readRDS(here("output", "extract", "data_eligible.rds"))
@@ -25,14 +26,10 @@ data_eligible <- readRDS(here("output", "extract", "data_eligible.rds"))
 
 # Process data ----------------------------------------------------------------
 data_eligible <- data_eligible %>%
-  mutate(
-    # Create *_time which is the days between elig_date and *_date
-    covid_vax_disease_1_time = as.integer(difftime(covid_vax_disease_1_date, elig_date, units = "days")),
-    death_time = as.integer(difftime(death_date, elig_date, units = "days")),
-    dereg_time = as.integer(difftime(dereg_date, elig_date, units = "days"))
-    ) %>%
-  # replace times > 182 days (26 weeks) with NA, as this is the end of follow-up
-  mutate(across(ends_with("_time"), ~if_else(.x <= 26*7, .x, NA_integer_)))
+  # add *_time vars - see analysis/functions/processing.R for add_time_vars()
+  add_time_vars() %>%
+  # add age_jcvi_group
+  add_age_jcvi_group()
 
 # Check for negative times
 cat("\nCheck for negative values (should be 0):\n")
@@ -56,6 +53,7 @@ data_eligible <- data_eligible %>%
 rm(data_elig_date_rank)
 
 # Explore distribution of covid_vax_disease_1_time -----------------------------
+# (stratified by jcvi_group and elig_date)
 
 # Plot using geom_freqpoly()
 data_eligible %>%
@@ -105,36 +103,25 @@ data_vax_counts %>%
 ggsave(file.path(outdir, "vax_dates_line.png"))
 
 
-# Count how many patients there are in the imd subgroups by ethnicity ----------
-data_imd_eth <- data_eligible %>%
-  group_by(imd_Q5, ethnicity) %>%
-  summarise(n = n(), .groups = "drop")
+# Explore distribution of variables stratified by ethnicity x imd --------------
+# variables = age_jcvi_group, sex, region and jcvi_group
 
-data_imd_eth_sex <- data_eligible %>%
-  group_by(imd_Q5, ethnicity, sex) %>%
-  summarise(n = n(), .groups = "drop")
+# TODO write a function based on the code below that takes a variable as input
+# (e.g. age_jcvi_group) and generates data_bar_plot
+data_bar_plot <- data_eligible %>%
+  group_by(ethnicity, imd_Q5, age_jcvi_group) %>%
+  summarise(n = roundmid_any(n(), to = threshold)) %>%
+  ungroup(age_jcvi_group) %>%
+  mutate(percent = 100*n/sum(n)) %>%
+  ungroup()
 
-data_imd_eth_reg <- data_eligible %>%
-  group_by(imd_Q5, ethnicity, region) %>%
-  summarise(n = n(), .groups = "drop")
+# TODO write a function based on the code below to create a bar plot 
+# (feel free to play around with the appearance)
+data_bar_plot %>%
+  ggplot(aes(x = age_jcvi_group, y = percent)) +
+  geom_bar(stat = "identity") +
+  facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) 
 
-data_imd_eth_jcvi <- data_eligible %>%
-  group_by(imd_Q5, ethnicity, jcvi_group) %>%
-  summarise(n = n(), .groups = "drop")
+# TODO save a single dataset that contains data_bar_plot for each variable 
+# (you'll have to add a column to indicate which variable the data refers to)
 
-# Bind these together and save as csv file so we can release from opensafely
-data_counts <- bind_rows(
-  data_imd_eth %>% mutate(variable = NA_character_, level = NA_character_),
-  data_imd_eth_sex %>% mutate(variable = "sex") %>% rename(level = sex),
-  data_imd_eth_reg %>% mutate(variable = "region") %>% rename(level = region),
-  data_imd_eth_jcvi %>% mutate(variable = "jcvi_group") %>% rename(level = jcvi_group)
-) %>%
-  # we round the counts using midpoint rounding to reduce risk of secondary disclosure
-  # threshold is defined in design.R
-  mutate(across(n, ~roundmid_any(.x, to = threshold)))
-
-# Save to .csv file for release
-readr::write_csv(
-  data_counts, 
-  file.path(outdir, glue("group_counts_midpoint{threshold}.csv"))
-  )
