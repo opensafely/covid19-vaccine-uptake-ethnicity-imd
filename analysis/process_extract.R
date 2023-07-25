@@ -1,6 +1,7 @@
 # load libraries
 library(tidyverse)
 library(here)
+library(rlang)
 
 # load design script
 source(here("analysis", "design.R"))
@@ -52,9 +53,45 @@ data_processed <- extract %>%
 # tidy up
 rm(extract)
 
-# TODO Elsie
-# write in checks to make sure at risk group, JCVI groups and elig dates have 
-# been derived correctly in study definition
+# checks atrisk_group, jcvi_groups & elig_date derived correctly in study def
+# atrisk_group
+atrisk_group_r <- str_replace_all(atrisk_group, "OR", "|")
+# jcvi
+jcvi_groups_definition <- str_replace_all(jcvi_groups$definition, "AND" , "&")
+jcvi_groups_definition <- str_replace_all(jcvi_groups_definition, "DEFAULT" , "TRUE")
+jcvi_groups_r <- str_c(
+  str_c(jcvi_groups_definition, "~\"", jcvi_groups$group, "\""), 
+  collapse = "; "
+)
+# elig_date
+elig_dates_definition <- str_replace_all(elig_dates$description, "OR" , "|")
+elig_dates_definition <- str_replace_all(elig_dates_definition, "AND" , "&")
+elig_dates_definition <- str_replace_all(elig_dates_definition, "=" , "==")
+elig_dates_definition <- str_replace_all(elig_dates_definition, ">==" , ">=")
+elig_dates_definition <- str_replace_all(elig_dates_definition, "DEFAULT" , "TRUE")
+elig_dates_r <- str_c(
+  str_c(elig_dates_definition, "~\"", elig_dates$date, "\""), 
+  collapse = "; "
+)
+
+check_groups <- data_processed %>%
+  mutate(
+    atrisk_group_r = !! parse_expr(atrisk_group_r),
+    jcvi_group_r = case_when(!!! parse_exprs(jcvi_groups_r)),
+    elig_date_r = as.Date(case_when(!!! parse_exprs(elig_dates_r)))
+  ) %>%
+  transmute(
+    check_atrisk_group = atrisk_group == atrisk_group_r,
+    check_jcvi_group = as.character(jcvi_group) == jcvi_group_r,
+    check_elig_date = elig_date == elig_date_r
+  ) %>%
+  summarise_all(~sum(!.))
+
+if (any(unlist(check_groups) > 0)) {
+  print(check_groups)
+  stop("Groups derived in study definition do not match those derived in R.")
+}
+
 
 # apply exclusions
 data_processed <- data_processed %>%
