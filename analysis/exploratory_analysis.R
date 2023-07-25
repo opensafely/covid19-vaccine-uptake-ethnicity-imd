@@ -125,3 +125,71 @@ data_bar_plot %>%
 # TODO save a single dataset that contains data_bar_plot for each variable 
 # (you'll have to add a column to indicate which variable the data refers to)
 
+
+
+# Test functions 
+# Function for visualization data
+
+generate_data_bar_plot <- function(variable) {
+  data_bar_plot <- data_eligible %>%
+    group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
+    summarise(n = roundmid_any(n(), to = threshold)) %>%
+    ungroup(!!sym(variable)) %>%
+    mutate(percent = 100*n/sum(n)) %>%
+    ungroup()
+  
+  return(data_bar_plot)
+}
+
+
+# Function for bar plot
+#create_bar_plot <- function(data, variable) {
+#  ggplot(data, aes(x = !!sym(variable), y = percent)) +
+#    geom_bar(stat = "identity") +
+#    facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
+#    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#}
+
+# Function for bar plot
+create_bar_plot <- function(data, variable) {
+  ggplot(data, aes_string(x = variable, y = "percent", fill = variable)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_fill_brewer(palette = "Set1") +
+    facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "bottom",
+          plot.title = element_text(hjust = 0.5)) +
+    labs(title = paste("Distribution of", variable, "stratified by ethnicity and IMD"),
+         x = variable,
+         y = "Percentage (%)",
+         fill = variable)
+}
+
+
+
+# Function for creating a table 
+
+variables <- c("age_jcvi_group", "sex", "region", "jcvi_group")
+data_bar_plots <- lapply(variables, generate_data_bar_plot)
+
+# Add a column to indicate which variable the data refers to
+for (i in seq_along(data_bar_plots)) {
+  data_bar_plots[[i]]$variable <- variables[i]
+}
+
+# Combine all data_bar_plots into a single dataset
+combined_data_bar_plot <- do.call(rbind, data_bar_plots)
+
+
+
+
+
+
+
+
+
+
+
+
+
