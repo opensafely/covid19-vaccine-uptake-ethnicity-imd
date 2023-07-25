@@ -1,3 +1,4 @@
+# Setup ------------------------------------------------------------------------
 # load libraries
 library(tidyverse)
 library(here)
@@ -15,6 +16,7 @@ dir_path <- here("output", "extract")
 # load study definition extract
 extract <- arrow::read_feather(file.path(dir_path, "input.feather"))
 
+# Fix dummy_data  --------------------------------------------------------------
 # don't execute if running on TPP
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   
@@ -36,6 +38,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
 # summarise extracted data
 extract %>% my_skim(path = file.path(dir_path, "skim_extract.txt"))
 
+# Process data  ----------------------------------------------------------------
 # initial processing
 data_processed <- extract %>%
   # because date types are not returned consistently by cohort extractor
@@ -59,6 +62,7 @@ data_processed <- extract %>%
 # tidy up
 rm(extract)
 
+# Perform checks  --------------------------------------------------------------
 # checks atrisk_group, jcvi_groups & elig_date derived correctly in study def
 # atrisk_group
 atrisk_group_r <- str_replace_all(atrisk_group, "OR", "|")
@@ -98,8 +102,7 @@ if (any(unlist(check_groups) > 0)) {
   stop("Groups derived in study definition do not match those derived in R.")
 }
 
-
-# apply exclusions
+# Apply eligibility criteria  --------------------------------------------------
 data_processed <- data_processed %>%
   mutate(
     # create variables for applying the eligibility criteria
