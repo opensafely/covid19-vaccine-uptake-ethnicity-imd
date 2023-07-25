@@ -2,10 +2,12 @@
 library(tidyverse)
 library(here)
 library(rlang)
+library(glue)
 
 # load design script
 source(here("analysis", "design.R"))
 source(here("analysis", "functions", "utility.R"))
+source(here("analysis", "functions", "processing.R"))
 
 # create output directory
 dir_path <- here("output", "extract")
@@ -44,7 +46,11 @@ data_processed <- extract %>%
     sex = factor(sex, levels = sex_levels),
     region = factor(region, levels = regions$region),
     ethnicity = factor(ethnicity, levels = ethnicity_levels),
-    imd_Q5 = factor(imd_Q5, levels = imd_Q5_levels)
+    imd_Q5 = factor(imd_Q5, levels = imd_Q5_levels),
+    # define age on different dates according to JCVI groups
+    # otherwise a few patients will end up in a different age group to the
+    # rest of their jcvi group
+    age_jcvi = if_else(jcvi_group %in% c("10", "11", "12"), age_2, age_1)
   ) %>%
   # reorder so patient_id is first column
   select(patient_id, everything()) 
@@ -108,13 +114,13 @@ data_processed <- data_processed %>%
     # apply the eligibility criteria
     c0_descr = "All patients in OpenSAFELY-TPP",
     c0 = TRUE,
-    c1_descr = "   aged 18 years or over",
+    c1_descr = glue("   aged 18 years or over on {study_parameters$ref_age_2}"),
     c1 = c0 & aged_over_18,
     c2_descr = "   alive at start of eligibility date",
     c2 = c1 & alive_on_elig_date,
     c3_descr = "   registered with one TPP general practice between 2020-01-01 and start of eligibility date",
     c3 = c2 & has_follow_up,
-    c4_descr = "   aged under 120 years",
+    c4_descr = glue("   aged under 120 years on {study_parameters$ref_age_2}"),
     c4 = c3 & aged_under_120,
     c5_descr = "   no vaccination before rollout",
     c5 = c4 & no_vax_before_start,
@@ -153,7 +159,7 @@ data_eligible <- data_processed %>%
   filter(include) %>%
   select(
     patient_id, elig_date, covid_vax_disease_1_date, death_date, dereg_date, 
-    age_1, jcvi_group, region, sex, imd_Q5, ethnicity
+    age_jcvi, jcvi_group, region, sex, imd_Q5, ethnicity
     ) 
 
 # tidy up
