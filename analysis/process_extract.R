@@ -110,15 +110,15 @@ data_processed <- data_processed %>%
     c0 = TRUE,
     c1_descr = "   aged 18 years or over",
     c1 = c0 & aged_over_18,
-    c2_descr = "   alive on eligibility date",
+    c2_descr = "   alive at start of eligibility date",
     c2 = c1 & alive_on_elig_date,
-    c3_descr = "   registered with one TPP general practice between 2020-01-01 and eligibility date",
+    c3_descr = "   registered with one TPP general practice between 2020-01-01 and start of eligibility date",
     c3 = c2 & has_follow_up,
     c4_descr = "   aged under 120 years",
     c4 = c3 & aged_under_120,
     c5_descr = "   no vaccination before rollout",
     c5 = c4 & no_vax_before_start,
-    c6_descr = "   sex, region, IMD and ethnicity recorded",
+    c6_descr = "   sex, region, IMD and ethnicity recorded at start of eligibility date",
     c6 = c5 & sex_recorded & region_recorded & imd_recorded & ethnicity_recorded,
     include = c6
   )
