@@ -106,15 +106,3 @@ my_skim <- function(
     
   }
 }
-
-flow_stats_rounded <- function(.data, to) {
-  .data %>%
-    mutate(
-      n = roundmid_any(n, to = to),
-      n_exclude = lag(n) - n,
-      pct_exclude = n_exclude/lag(n),
-      pct_all = n / first(n),
-      pct_step = n / lag(n),
-    ) %>%
-    mutate(across(starts_with("pct_"), ~round(.x, 3)))
-}
