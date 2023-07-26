@@ -28,8 +28,6 @@ study_parameters <-
   ) 
 
 study_parameters %>% 
-  readr::write_rds(here::here("analysis", "lib", "study_parameters.rds"))
-study_parameters %>% 
   jsonlite::write_json(
     path = here::here("analysis", "lib", "study_parameters.json"),
     auto_unbox = TRUE, pretty=TRUE
