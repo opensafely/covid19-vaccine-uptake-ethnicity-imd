@@ -106,49 +106,17 @@ ggsave(file.path(outdir, "vax_dates_line.png"))
 # Explore distribution of variables stratified by ethnicity x imd --------------
 # variables = age_jcvi_group, sex, region and jcvi_group
 
-# TODO write a function based on the code below that takes a variable as input
-# (e.g. age_jcvi_group) and generates data_bar_plot
-data_bar_plot <- data_eligible %>%
-  group_by(ethnicity, imd_Q5, age_jcvi_group) %>%
-  summarise(n = roundmid_any(n(), to = threshold)) %>%
-  ungroup(age_jcvi_group) %>%
-  mutate(percent = 100*n/sum(n)) %>%
-  ungroup()
-
-# TODO write a function based on the code below to create a bar plot 
-# (feel free to play around with the appearance)
-data_bar_plot %>%
-  ggplot(aes(x = age_jcvi_group, y = percent)) +
-  geom_bar(stat = "identity") +
-  facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) 
-
-# TODO save a single dataset that contains data_bar_plot for each variable 
-# (you'll have to add a column to indicate which variable the data refers to)
-
-
-
-# Test functions 
-# Function for visualization data
-
+# Function for visualization data that is safe to release
 generate_data_bar_plot <- function(variable) {
   data_bar_plot <- data_eligible %>%
     group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
     summarise(n = roundmid_any(n(), to = threshold)) %>%
     ungroup(!!sym(variable)) %>%
     mutate(percent = 100*n/sum(n)) %>%
-    ungroup()
-  
+    ungroup() %>%
+    mutate(variable = variable)  # Add the 'variable' column here
   return(data_bar_plot)
 }
-
-
-# Function for bar plot
-#create_bar_plot <- function(data, variable) {
-#  ggplot(data, aes(x = !!sym(variable), y = percent)) +
-#    geom_bar(stat = "identity") +
-#    facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
-#    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-#}
 
 # Function for bar plot
 create_bar_plot <- function(data, variable) {
@@ -167,37 +135,9 @@ create_bar_plot <- function(data, variable) {
 }
 
 
-
 # Function for creating a table 
-
 variables <- c("age_jcvi_group", "sex", "region", "jcvi_group")
 data_bar_plots <- lapply(variables, generate_data_bar_plot)
 
-generate_data_bar_plot <- function(variable) {
-  data_bar_plot <- data_eligible %>%
-    group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
-    summarise(n = roundmid_any(n(), to = threshold)) %>%
-    ungroup(!!sym(variable)) %>%
-    mutate(percent = 100*n/sum(n)) %>%
-    ungroup() %>%
-    mutate(variable = variable)  # Add the 'variable' column here
-  return(data_bar_plot)
-}
-
-
 # Combine all data_bar_plots into a single dataset
 combined_data_bar_plot <- do.call(rbind, data_bar_plots)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
