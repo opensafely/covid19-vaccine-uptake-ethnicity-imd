@@ -173,13 +173,21 @@ create_bar_plot <- function(data, variable) {
 variables <- c("age_jcvi_group", "sex", "region", "jcvi_group")
 data_bar_plots <- lapply(variables, generate_data_bar_plot)
 
-# Add a column to indicate which variable the data refers to
-for (i in seq_along(data_bar_plots)) {
-  data_bar_plots[[i]]$variable <- variables[i]
+generate_data_bar_plot <- function(variable) {
+  data_bar_plot <- data_eligible %>%
+    group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
+    summarise(n = roundmid_any(n(), to = threshold)) %>%
+    ungroup(!!sym(variable)) %>%
+    mutate(percent = 100*n/sum(n)) %>%
+    ungroup() %>%
+    mutate(variable = variable)  # Add the 'variable' column here
+  return(data_bar_plot)
 }
+
 
 # Combine all data_bar_plots into a single dataset
 combined_data_bar_plot <- do.call(rbind, data_bar_plots)
+
 
 
 
