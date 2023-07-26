@@ -127,7 +127,7 @@ data_bar_plot %>%
 
 
 
-# Test functions 
+# TODO
 # Function for visualization data
 
 generate_data_bar_plot <- function(variable) {
@@ -168,25 +168,24 @@ create_bar_plot <- function(data, variable) {
 
 
 
-# Function for creating a table 
+# Generating the data 
 
 variables <- c("age_jcvi_group", "sex", "region", "jcvi_group")
 data_bar_plots <- lapply(variables, generate_data_bar_plot)
 
-generate_data_bar_plot <- function(variable) {
-  data_bar_plot <- data_eligible %>%
-    group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
-    summarise(n = roundmid_any(n(), to = threshold)) %>%
-    ungroup(!!sym(variable)) %>%
-    mutate(percent = 100*n/sum(n)) %>%
-    ungroup() %>%
-    mutate(variable = variable)  # Add the 'variable' column here
-  return(data_bar_plot)
-}
+# Generate plots for each data_bar_plot
+plots <- lapply(seq_along(variables), function(i) {
+  create_bar_plot(data_bar_plots[[i]], variables[i])
+})
+
+# View outputs of the plots 
+#print(plots[[4]])
 
 
-# Combine all data_bar_plots into a single dataset
-combined_data_bar_plot <- do.call(rbind, data_bar_plots)
+# Combine all data_bar_plot into a single table 
+combined_data_bar_plot <- dplyr::bind_rows(data_bar_plots)
+
+
 
 
 
