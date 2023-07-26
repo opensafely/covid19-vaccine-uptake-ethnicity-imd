@@ -6,6 +6,7 @@ library(purrr)
 library(gtsummary)
 library(ggplot2)
 library(viridis)
+library(Polychrome)
 library(here)
 library(fs)
 
@@ -61,12 +62,12 @@ data_eligible %>%
   geom_freqpoly(binwidth = 1) +
   facet_wrap(~jcvi_group, scales = "free_y", ncol=4) +
   scale_color_viridis_d() +
+  guides(colour = guide_legend(nrow = 1)) +
   theme_minimal() +
-  theme(legend.position = "bottom") +
-  labs(title = "Distribution of covid_vax_disease_1_time across different eligibility dates",
-       x = "Days between eligibility and first vaccination",
-       y = "Frequency",
-       color = "Eligibility Date")
+  theme(legend.position = c(0.65, 0.1)) +
+  labs(x = "Days between eligibility and first vaccination",
+       y = "Number of patients",
+       color = "Eligibility date order")
 # Save
 ggsave(file.path(outdir, "vax_dates_freqpoly.png"))
 
@@ -93,11 +94,11 @@ data_vax_counts %>%
   geom_line() +
   facet_wrap(~jcvi_group, scales = "free_y", nrow = 4) +
   scale_color_viridis_d() +
+  guides(colour = guide_legend(nrow = 1)) +
   theme_minimal() +
-  theme(legend.position = "bottom") +
-  labs(title = "Distribution of covid_vax_disease_1_date across different eligibility dates",
-       x = "Days between eligibility and first vaccination",
-       y = "Frequency",
+  theme(legend.position = c(0.65, 0.1)) +
+  labs(x = "Days between eligibility and first vaccination",
+       y = "Number of patients",
        color = "Eligibility Date")
 # Save
 ggsave(file.path(outdir, "vax_dates_line.png"))
@@ -110,30 +111,45 @@ ggsave(file.path(outdir, "vax_dates_line.png"))
 generate_data_bar_plot <- function(variable) {
   data_bar_plot <- data_eligible %>%
     group_by(ethnicity, imd_Q5, !!sym(variable)) %>%
-    summarise(n = roundmid_any(n(), to = threshold)) %>%
+    summarise(n = roundmid_any(n(), to = threshold), .groups = "keep") %>%
     ungroup(!!sym(variable)) %>%
     mutate(percent = 100*n/sum(n)) %>%
     ungroup() %>%
-    mutate(variable = variable)  # Add the 'variable' column here
+    rename(level = !!sym(variable)) %>%
+    mutate(variable = variable, .before = "level")  # Add the 'variable' column here
   return(data_bar_plot)
 }
 
 # Function for bar plot
-create_bar_plot <- function(data, variable) {
-  ggplot(data, aes_string(x = variable, y = "percent", fill = variable)) +
+create_bar_plot <- function(data, path) {
+  variable_name <- unique(data$variable)
+  levels <- unique(data$level)
+  if (length(levels) == 2) {
+    # otherwise it picks bright red and green which doens't look nice...
+    fill_pal <- Polychrome::light.colors(n=24)[c(24,14)]
+  } else {
+    # you could pick a different colour scheme from Polychrome or another package if you prefer
+    fill_pal <- Polychrome::light.colors(n=length(levels)) 
+  }
+  names(fill_pal) <- levels
+  p <- ggplot(data, aes(x = level, y = percent, fill = level)) +
     geom_bar(stat = "identity", color = "black") +
-    scale_fill_brewer(palette = "Set1") +
+    scale_fill_manual(values = fill_pal) +
     facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
+    guides(fill = guide_legend(byrow = TRUE)) +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    theme(axis.text.x = element_blank(),
           legend.position = "bottom",
           plot.title = element_text(hjust = 0.5)) +
-    labs(title = paste("Distribution of", variable, "stratified by ethnicity and IMD"),
-         x = variable,
+    labs(x = NULL,
          y = "Percentage (%)",
-         fill = variable)
+         fill = variable_name)
+  ggsave(
+    filename = file.path(path, paste0("strat_dist_", variable_name, ".png")),
+    plot = p
+  )
+  return(p)
 }
-
 
 # Function for creating a table 
 variables <- c("age_jcvi_group", "sex", "region", "jcvi_group")
@@ -141,3 +157,15 @@ data_bar_plots <- lapply(variables, generate_data_bar_plot)
 
 # Combine all data_bar_plots into a single dataset
 combined_data_bar_plot <- do.call(rbind, data_bar_plots)
+# you could use dplyr::bind_rows(data_bar_plots) as it can handle lists, 
+# so you avoid having to use do.call()
+write_csv(
+  combined_data_bar_plot,
+  file.path(outdir, glue("combined_data_bar_plot_midpoint{threshold}.csv"))
+)
+
+# create and save the plots
+plots <- lapply(
+  seq_along(data_bar_plots), 
+  function(x) create_bar_plot(data_bar_plots[[x]], path = outdir)
+  )
