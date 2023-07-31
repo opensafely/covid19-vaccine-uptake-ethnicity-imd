@@ -112,8 +112,8 @@ data_processed <- data_processed %>%
     no_vax_before_start = is.na(covid_vax_disease_1_date) | as.Date(study_parameters$start_date) <= covid_vax_disease_1_date,
     sex_recorded = !is.na(sex),
     region_recorded = !is.na(region),
-    imd_recorded = imd_Q5 != "Unknown",
-    ethnicity_recorded = ethnicity != "Unknown",
+    imd_recorded = !(is.na(imd_Q5) | (imd_Q5 %in% "Unknown")),
+    ethnicity_recorded = !(is.na(ethnicity) | (ethnicity %in% "Unknown")),
     # apply the eligibility criteria
     c0_descr = "All patients in OpenSAFELY-TPP",
     c0 = TRUE,

@@ -73,7 +73,7 @@ data_eligible$status <- ifelse(is.na(data_eligible$covid_vax_disease_1_date) |
                                  data_eligible$dereg_date < data_eligible$covid_vax_disease_1_date, 0, 1)
 
 # Create a 'time' variable that represents the time to event or censoring
-data_eligible$time <- with(data_eligible, pmin(covid_vax_disease_1_date, death_date, dereg_date) - elig_date)
+data_eligible$time <- with(data_eligible, pmin(covid_vax_disease_1_date, death_date, dereg_date, na.rm = TRUE) - elig_date)
 data_eligible$time <- as.numeric(data_eligible$time)
 
 # Create a Surv object with the time and status variables

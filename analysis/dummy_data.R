@@ -66,7 +66,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   
   # when running on TPP save empty output to keep project.yaml happy
   arrow::write_feather(
-    tibble(),
+    dplyr::tibble(),
     here::here("output", "extract", "dummy_data.feather")
   )
   
