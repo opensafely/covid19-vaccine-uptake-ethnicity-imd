@@ -31,13 +31,15 @@ data_eligible <- data_eligible %>%
     ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
     # everyone censored at 26*7 days, so the time to event (tte) is the earliest  
     # of covid_vax_disease_1_time and 26*7
-    # TODO look at the documentation for pmin() and make sure you understand the
-    # difference between pmin() and min()
-    tte = pmin(covid_vax_disease_1_time, 26*7, na.rm = TRUE),
-    # people with vaccinations before eligible will have negative values for
-    # tte - replace these with zeros (we reassign their date of vaccination
-    # as their eligibility date)
-    tte = pmax(0, tte),
+    tte = pmin(
+      # event time - replace negative times with zero
+      pmax(0, covid_vax_disease_1_time), 
+      # censoring times
+      death_time, dereg_time, 
+      # administrative censoring at end of study
+      26*7, 
+      na.rm = TRUE
+      ),
     # status is 1 if the tte corresponds to a vaccination time
     status = covid_vax_disease_1_time == tte
   )
