@@ -7,7 +7,7 @@ library(survival)
 library(survminer)
 
 # Create output directory
-outdir <- here("output", "exploratory")
+outdir <- here("output", "kaplan_meier")
 fs::dir_create(outdir)
 
 # Source metadata and functions
@@ -18,11 +18,31 @@ source(here("analysis", "functions", "processing.R"))
 # Import the data 
 data_eligible <- readRDS(here("output", "extract", "data_eligible.rds"))
 
-# Create a numeric variable to measure time from eligibility date to vaccination
-data_eligible$days_to_vaccine <- as.numeric(data_eligible$covid_vax_disease_1_date - data_eligible$elig_date)
+# Process data ----------------------------------------------------------------
+data_eligible <- data_eligible %>%
+  # add *_time vars - see analysis/functions/processing.R for add_time_vars()
+  add_time_vars() %>%
+  # add age_jcvi_group
+  add_age_jcvi_group() %>%
+  # define the variables for using in the survfit formula:
+  mutate(
+    # combine the ethnicity and IMD categories - we will calculate kaplan-meier
+    # estimates in each of these categories.
+    ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
+    # everyone censored at 26*7 days, so the time to event (tte) is the earliest  
+    # of covid_vax_disease_1_time and 26*7
+    # TODO look at the documentation for pmin() and make sure you understand the
+    # difference between pmin() and min()
+    tte = pmin(covid_vax_disease_1_time, 26*7, na.rm = TRUE),
+    # people with vaccinations before eligible will have negative values for
+    # tte - replace these with zeros (we reassign their date of vaccination
+    # as their eligibility date)
+    tte = pmax(0, tte),
+    # status is 1 if the tte corresponds to a vaccination time
+    status = covid_vax_disease_1_time == tte
+  )
 
-# Create a categorical identifier of event (vaccine uptake)
-data_eligible$vaccine_uptake <- ifelse(is.na(data_eligible$covid_vax_disease_1_date), 0, 1)
+# TODO update the code from here, using the variables that I've defined above.
 
 # Create a Survival object for kaplan-meier analysis
 surv_obj <- Surv(time = data_eligible$days_to_vaccine, event = data_eligible$vaccine_uptake)
