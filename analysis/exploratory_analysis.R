@@ -6,7 +6,6 @@ library(purrr)
 library(gtsummary)
 library(ggplot2)
 library(viridis)
-library(Polychrome)
 library(here)
 library(fs)
 
@@ -124,12 +123,20 @@ generate_data_bar_plot <- function(variable) {
 create_bar_plot <- function(data, path) {
   variable_name <- unique(data$variable)
   levels <- unique(data$level)
+  # fill_pal <- Polychrome::light.colors(n=24) # Polychrome not installed in OpenSAFELY
+  fill_pal <- c(
+    "#FD3216", "#00FE35", "#6A76FC", "#FED4C4", "#FE00CE", "#0DF9FF", "#F6F926",
+    "#FF9616", "#479B55", "#EEA6FB", "#DC587D", "#D626FF", "#6E899C", "#00B5F7",
+    "#B68E00", "#C9FBE5", "#FF0092", "#22FFA7", "#E3EE9E", "#86CE00", "#BC7196", 
+    "#7E7DCD", "#FC6955", "#E48F72"
+    )
   if (length(levels) == 2) {
     # otherwise it picks bright red and green which doens't look nice...
-    fill_pal <- Polychrome::light.colors(n=24)[c(24,14)]
+    fill_pal <- fill_pal[c(24,14)]
   } else {
     # you could pick a different colour scheme from Polychrome or another package if you prefer
-    fill_pal <- Polychrome::light.colors(n=length(levels)) 
+    fill_pal <- fill_pal[-c(1:2)] # this is personal preference, I just don't like the red and green
+    fill_pal <- fill_pal[1:length(levels)]
   }
   names(fill_pal) <- levels
   p <- ggplot(data, aes(x = level, y = percent, fill = level)) +
