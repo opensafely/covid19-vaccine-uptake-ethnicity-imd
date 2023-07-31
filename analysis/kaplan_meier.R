@@ -27,7 +27,8 @@ data_eligible <- data_eligible %>%
   # define the variables for using in the survfit formula:
   mutate(
     # combine the ethnicity and IMD categories - we will calculate kaplan-meier
-    # estimates in each of these categories.
+    # estimates in each of these categories - you can do this by adding this 
+    # variable to the right-hand side of the formula in survfit
     ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
     # create time to event (tte) variable
     tte = pmin(
