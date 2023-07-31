@@ -29,8 +29,7 @@ data_eligible <- data_eligible %>%
     # combine the ethnicity and IMD categories - we will calculate kaplan-meier
     # estimates in each of these categories.
     ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
-    # everyone censored at 26*7 days, so the time to event (tte) is the earliest  
-    # of covid_vax_disease_1_time and 26*7
+    # create time to event (tte) variable
     tte = pmin(
       # event time - replace negative times with zero
       pmax(0, covid_vax_disease_1_time), 
