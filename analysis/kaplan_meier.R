@@ -75,37 +75,89 @@ ggsurv_obj <- ggsurvplot(fit_ethnicity_imd, data = data_surv, risk.table = TRUE)
 
 ##########
 ##########
+# Extract the plot from ggsurv_obj and get rid of the legend using `+ ggplot2::theme()`, then save the plot
+ggsurv_obj$plot <- ggsurv_obj$plot + theme(legend.position = "none")
+ggsurv_obj$data.survtable
+ggsave("km_plot_all_groups.png", ggsurv_obj$plot)
 
-# List of unique ethnicity and IMD subgroups
-ethnicity_imd_groups <- unique(data_surv$ethnicity_imd)
 
-# Create a plot for each ethnicity and IMD subgroup
-for (group in ethnicity_imd_groups) {
-  # Subset the data for the current group
-  data_subset <- data_surv[data_surv$ethnicity_imd == group, ]
+# Create a new dataset for vaccine coverage
+
+# Calculate the survival probability and coverage
+surv_table <- surv_table %>%
+  mutate(surv = (n.risk - n.event) / n.risk,
+         coverage = 1 - surv)
+
+# Filter the survival table to only keep time = 12 weeks or 26 weeks
+data_coverage <- surv_table %>%
+  filter(time %in% c(12*7, 26*7)) %>%
+  select(strata, time, coverage)
+
+# Write the data to a CSV file
+write_csv(
+  data_coverage,
+  file.path(outdir, glue::glue("vaccine_coverage_midpoint{threshold}.csv"))
+)
+
+
+# Create 5 plots: one for each 
+
+# List of unique ethnicities
+ethnicities <- unique(sapply(data_surv$ethnicity_imd, function(x) strsplit(x, ", ")[[1]][1]))
+
+# Create a plot for each ethnicity
+for (ethnicity in ethnicities) {
+  # Subset the data for the current ethnicity
+  data_subset <- data_surv[grep(ethnicity, data_surv$ethnicity_imd), ]
   
   # Create a Surv object for kaplan-meier analysis
   surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
   
   # Fit a survival curve
-  fit <- survfit(surv_obj ~ 1, data = data_subset)
+  fit <- survfit(surv_obj ~ ethnicity_imd, data = data_subset)
   
   # Plot the survival curve and save it to a variable
   plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
-                     title = paste("Kaplan-Meier plot for", group),
+                     title = paste("Kaplan-Meier plot for", ethnicity),
                      xlab = "Time (days)", ylab = "Survival probability",
-                     legend.title = "Status",
-                     palette = c("#E7B800", "#2E9FDF"),
+                     legend.title = "IMD Quintile",
+                     palette = "jco",
                      theme = theme_classic2())
   
   # Save the plot to a file
-  ggsave(paste0("km_plot_", gsub(" ", "_", gsub(",", "", group)), ".png"), plot$plot)
+  ggsave(paste0("km_plot_", gsub(" ", "_", ethnicity), ".png"), plot$plot)
 }
 
+##########
+##########
+
+# List of unique ethnicity and IMD subgroups
+#ethnicity_imd_groups <- unique(data_surv$ethnicity_imd)
+
+# Create a plot for each ethnicity and IMD subgroup
+#for (group in ethnicity_imd_groups) {
+  # Subset the data for the current group
+#  data_subset <- data_surv[data_surv$ethnicity_imd == group, ]
+  
+  # Create a Surv object for kaplan-meier analysis
+#  surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
+  
+  # Fit a survival curve
+#  fit <- survfit(surv_obj ~ 1, data = data_subset)
+  
+  # Plot the survival curve and save it to a variable
+#  plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
+#                    title = paste("Kaplan-Meier plot for", group),
+#                     xlab = "Time (days)", ylab = "Survival probability",
+#                     legend.title = "Status",
+#                     palette = c("#E7B800", "#2E9FDF"),
+#                     theme = theme_classic2())
+  
+  # Save the plot to a file
+#  ggsave(paste0("km_plot_", gsub(" ", "_", gsub(",", "", group)), ".png"), plot$plot)
+#}
 
 
-# Check unique values of the 'status' variable
-unique(data_surv$status)
 
 
 
