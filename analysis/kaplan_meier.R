@@ -86,52 +86,8 @@ for (group in ethnicity_imd_groups) {
   # Plot the survival curve and save it to a variable
   plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
                      title = paste("Kaplan-Meier plot for", group),
-                     xlab = "Time (days)", ylab = "Survival probability") +
-    theme(
-      plot.title = element_text(size = 14, face = "bold"),
-      axis.title = element_text(size = 12),
-      legend.title = element_text(size = 10),
-      legend.text = element_text(size = 8)
-    )
-  
-  # Save the plot to a file
-  ggsave(paste0("km_plot_", gsub(" ", "_", gsub(",", "", group)), ".png"), plot$plot)
-}
-
-########
-########
-
-# List of unique ethnicity and IMD subgroups
-ethnicity_imd_groups <- unique(data_eligible$ethnicity_imd)
-
-# Create a plot for each ethnicity and IMD subgroup
-for (group in ethnicity_imd_groups) {
-  # Subset the data for the current group
-  data_subset <- data_eligible[data_eligible$ethnicity_imd == group, ]
-  
-  # Create a Surv object for kaplan-meier analysis
-  surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
-  
-  # Fit a survival curve
-  fit <- survfit(surv_obj ~ 1, data = data_subset)
-  
-  # Determine the number of levels in the status variable
-  num_status_levels <- length(unique(data_subset$status))
-  
-  # Define the legend labels based on the number of status levels
-  if (num_status_levels == 1) {
-    legend_labs <- c("Event")
-  } else if (num_status_levels == 2) {
-    legend_labs <- c("Censored", "Event")
-  } else {
-    stop("Unexpected number of status levels")
-  }
-  
-  # Plot the survival curve and save it to a variable
-  plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
-                     title = paste("Kaplan-Meier plot for", group),
                      xlab = "Time (days)", ylab = "Survival probability",
-                     legend.title = "Status", legend.labs = legend_labs,
+                     legend.title = "Status",
                      palette = c("#E7B800", "#2E9FDF"),
                      theme = theme_classic2())
   
@@ -141,24 +97,8 @@ for (group in ethnicity_imd_groups) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Check unique values of the 'status' variable
+unique(data_eligible$status)
 
 
 
