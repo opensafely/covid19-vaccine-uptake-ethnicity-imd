@@ -47,39 +47,7 @@ data_eligible <- data_eligible %>%
 # TODO update the code from here, using the variables that I've defined above.
 
 # Create a Survival object for kaplan-meier analysis
-surv_obj <- Surv(time = data_eligible$days_to_vaccine, event = data_eligible$vaccine_uptake)
-
-# Fit a survival curve for each ethnicity subgroup
-fit_ethnicity <- survfit(surv_obj ~ ethnicity, data = data_eligible)
-
-# Plot the survival curves for each ethnicity subgroup
-ggsurvplot(fit_ethnicity, data = data_eligible, risk.table = TRUE)
-
-
-### IMD sub-groups 
-##########
-
-# Fit survival curve for each IMD subgroup
-fit_imd <- survfit(surv_obj ~ imd_Q5, data = data_eligible)
-
-# Plot survival curves for each IMD subgroup
-ggsurvplot(fit_imd, data = data_eligible, risk.table = TRUE)
-
-
-### Add censoring to the survival plots
-############
-
-# Create a 'status' variable where 1 indicates the event (vaccination) occurred, and 0 indicates censoring
-data_eligible$status <- ifelse(is.na(data_eligible$covid_vax_disease_1_date) | 
-                                 data_eligible$death_date < data_eligible$covid_vax_disease_1_date | 
-                                 data_eligible$dereg_date < data_eligible$covid_vax_disease_1_date, 0, 1)
-
-# Create a 'time' variable that represents the time to event or censoring
-data_eligible$time <- with(data_eligible, pmin(covid_vax_disease_1_date, death_date, dereg_date, na.rm = TRUE) - elig_date)
-data_eligible$time <- as.numeric(data_eligible$time)
-
-# Create a Surv object with the time and status variables
-surv_obj <- Surv(time = data_eligible$time, event = data_eligible$status)
+surv_obj <- Surv(time = data_eligible$tte, event = data_eligible$status)
 
 # Fit the Kaplan-Meier survival model
 fit <- survfit(surv_obj ~ 1)
@@ -87,40 +55,89 @@ fit <- survfit(surv_obj ~ 1)
 # Plot the survival curve
 ggsurvplot(fit, data = data_eligible, risk.table = TRUE)
 
+#########
+#########
 
-#############
-#############
 
-# List of unique ethnicities
-ethnicities <- unique(data_eligible$ethnicity)
+# Fit the Kaplan-Meier survival model for each ethnicity and IMD subgroup
+fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity_imd, data = data_eligible)
 
-# Create a plot for each ethnicity
-for (ethnicity in ethnicities) {
-  # Subset the data for the current ethnicity
-  data_subset <- data_eligible[data_eligible$ethnicity == ethnicity, ]
+# Plot the survival curves for each ethnicity and IMD subgroup
+ggsurvplot(fit_ethnicity_imd, data = data_eligible, risk.table = TRUE)
+
+
+##########
+##########
+
+# List of unique ethnicity and IMD subgroups
+ethnicity_imd_groups <- unique(data_eligible$ethnicity_imd)
+
+# Create a plot for each ethnicity and IMD subgroup
+for (group in ethnicity_imd_groups) {
+  # Subset the data for the current group
+  data_subset <- data_eligible[data_eligible$ethnicity_imd == group, ]
   
   # Create a Surv object for kaplan-meier analysis
-  surv_obj <- Surv(time = data_subset$days_to_vaccine, event = data_subset$vaccine_uptake)
+  surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
   
   # Fit a survival curve
   fit <- survfit(surv_obj ~ 1, data = data_subset)
   
   # Plot the survival curve and save it to a variable
   plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
-                     title = paste("Kaplan-Meier plot for", ethnicity))
+                     title = paste("Kaplan-Meier plot for", group),
+                     xlab = "Time (days)", ylab = "Survival probability") +
+    theme(
+      plot.title = element_text(size = 14, face = "bold"),
+      axis.title = element_text(size = 12),
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 8)
+    )
   
   # Save the plot to a file
-  ggsave(paste0("km_plot_", ethnicity, ".png"), plot$plot)
+  ggsave(paste0("km_plot_", gsub(" ", "_", gsub(",", "", group)), ".png"), plot$plot)
 }
 
+########
+########
 
+# List of unique ethnicity and IMD subgroups
+ethnicity_imd_groups <- unique(data_eligible$ethnicity_imd)
 
-
-
-
-
-
-
+# Create a plot for each ethnicity and IMD subgroup
+for (group in ethnicity_imd_groups) {
+  # Subset the data for the current group
+  data_subset <- data_eligible[data_eligible$ethnicity_imd == group, ]
+  
+  # Create a Surv object for kaplan-meier analysis
+  surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
+  
+  # Fit a survival curve
+  fit <- survfit(surv_obj ~ 1, data = data_subset)
+  
+  # Determine the number of levels in the status variable
+  num_status_levels <- length(unique(data_subset$status))
+  
+  # Define the legend labels based on the number of status levels
+  if (num_status_levels == 1) {
+    legend_labs <- c("Event")
+  } else if (num_status_levels == 2) {
+    legend_labs <- c("Censored", "Event")
+  } else {
+    stop("Unexpected number of status levels")
+  }
+  
+  # Plot the survival curve and save it to a variable
+  plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
+                     title = paste("Kaplan-Meier plot for", group),
+                     xlab = "Time (days)", ylab = "Survival probability",
+                     legend.title = "Status", legend.labs = legend_labs,
+                     palette = c("#E7B800", "#2E9FDF"),
+                     theme = theme_classic2())
+  
+  # Save the plot to a file
+  ggsave(paste0("km_plot_", gsub(" ", "_", gsub(",", "", group)), ".png"), plot$plot)
+}
 
 
 
