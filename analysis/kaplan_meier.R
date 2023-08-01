@@ -19,63 +19,70 @@ source(here("analysis", "functions", "processing.R"))
 data_eligible <- readRDS(here("output", "extract", "data_eligible.rds"))
 
 # Process data ----------------------------------------------------------------
-data_eligible <- data_eligible %>%
+data_surv <- data_eligible %>%
   # add *_time vars - see analysis/functions/processing.R for add_time_vars()
   add_time_vars() %>%
   # add age_jcvi_group
   add_age_jcvi_group() %>%
   # define the variables for using in the survfit formula:
-  mutate(
+  transmute(
+    patient_id,
     # combine the ethnicity and IMD categories - we will calculate kaplan-meier
     # estimates in each of these categories - you can do this by adding this 
     # variable to the right-hand side of the formula in survfit
     ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
-    # create time to event (tte) variable
-    tte = pmin(
-      # event time - replace negative times with zero
-      pmax(0, covid_vax_disease_1_time), 
-      # censoring times
-      death_time, dereg_time, 
-      # administrative censoring at end of study
-      26*7, 
-      na.rm = TRUE
-      ),
-    # status is 1 if the tte corresponds to a vaccination time
-    status = covid_vax_disease_1_time == tte
+    # time until an outcome event (replace negative times with zero)
+    # do not use na.rm=TRUE here, as we want to keep NAs for unvaccinated people
+    tte_outcome = pmax(0, covid_vax_disease_1_time),
+    # time until a censoring event (administrative cenosring at 26*7)
+    # do use na.rm=TRUE here as we want people with missing death and dereg to 
+    # to have tte_censor=26*7
+    tte_censor = pmin(death_time, dereg_time, 26*7, na.rm = TRUE),
+    # tte is the earlier of tte_outcome and tte_censor
+    tte = pmin(tte_outcome, tte_censor, na.rm = TRUE),
+    # status = 1 if the person was vaccinated before they were censored
+    status = as.integer(!is.na(tte_outcome) & (tte_outcome <= tte_censor))
   )
 
-# TODO update the code from here, using the variables that I've defined above.
-
 # Create a Survival object for kaplan-meier analysis
-surv_obj <- Surv(time = data_eligible$tte, event = data_eligible$status)
+surv_obj <- Surv(time = data_surv$tte, event = data_surv$status)
 
-# Fit the Kaplan-Meier survival model
-fit <- survfit(surv_obj ~ 1)
-
-# Plot the survival curve
-ggsurvplot(fit, data = data_eligible, risk.table = TRUE)
+# # Fit the Kaplan-Meier survival model
+# fit <- survfit(surv_obj ~ 1)
+# 
+# # Plot the survival curve
+# ggsurvplot(fit, data = data_surv, risk.table = TRUE)
 
 #########
 #########
 
 
 # Fit the Kaplan-Meier survival model for each ethnicity and IMD subgroup
-fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity_imd, data = data_eligible)
+fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity_imd, data = data_surv)
 
 # Plot the survival curves for each ethnicity and IMD subgroup
-ggsurvplot(fit_ethnicity_imd, data = data_eligible, risk.table = TRUE)
+ggsurv_obj <- ggsurvplot(fit_ethnicity_imd, data = data_surv, risk.table = TRUE)
 
+# TODO
+# 1) extract the plot from ggsurv_obj and get rid of the legend using 
+#    `+ ggplot2::theme()`, then save the plot
+# 2) create a new dataset by filtering the data to only keep time = 12*7 or 26*7, 
+#    and use 1-surv to calculate the vaccine coverage. only keep the columns 
+#    that you wan to release from opensafely, and save this dataset as a csv file.
+# 3) update your code in the for loop below to create 5 plots: one for each 
+#    ethnicity where the IMD_Q5 groups have different colour lines, save these 
+#    plots.
 
 ##########
 ##########
 
 # List of unique ethnicity and IMD subgroups
-ethnicity_imd_groups <- unique(data_eligible$ethnicity_imd)
+ethnicity_imd_groups <- unique(data_surv$ethnicity_imd)
 
 # Create a plot for each ethnicity and IMD subgroup
 for (group in ethnicity_imd_groups) {
   # Subset the data for the current group
-  data_subset <- data_eligible[data_eligible$ethnicity_imd == group, ]
+  data_subset <- data_surv[data_surv$ethnicity_imd == group, ]
   
   # Create a Surv object for kaplan-meier analysis
   surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
@@ -98,7 +105,7 @@ for (group in ethnicity_imd_groups) {
 
 
 # Check unique values of the 'status' variable
-unique(data_eligible$status)
+unique(data_surv$status)
 
 
 
