@@ -27,10 +27,8 @@ data_surv <- data_eligible %>%
   # define the variables for using in the survfit formula:
   transmute(
     patient_id,
-    # combine the ethnicity and IMD categories - we will calculate kaplan-meier
-    # estimates in each of these categories - you can do this by adding this 
-    # variable to the right-hand side of the formula in survfit
-    ethnicity_imd = paste0(ethnicity, ", ", imd_Q5),
+    # keep all the variables that we'll use to define the subgroups
+    ethnicity, imd_Q5, region, jcvi_group, sex,
     # time until an outcome event (replace negative times with zero)
     # do not use na.rm=TRUE here, as we want to keep NAs for unvaccinated people
     tte_outcome = pmax(0, covid_vax_disease_1_time),
@@ -48,7 +46,7 @@ data_surv <- data_eligible %>%
 surv_obj <- Surv(time = data_surv$tte, event = data_surv$status)
 
 # Fit the Kaplan-Meier survival model for each ethnicity and IMD subgroup
-fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity_imd, data = data_surv)
+fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity + imd_Q5, data = data_surv)
 
 # Plot the survival curves for each ethnicity and IMD subgroup
 ggsurv_obj <- ggsurvplot(fit_ethnicity_imd, data = data_surv, risk.table = TRUE)
