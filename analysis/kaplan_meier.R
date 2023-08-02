@@ -78,13 +78,13 @@ ggsurv_obj <- ggsurvplot(fit_ethnicity_imd, data = data_surv, risk.table = TRUE)
 # Extract the plot from ggsurv_obj and get rid of the legend using `+ ggplot2::theme()`, then save the plot
 ggsurv_obj$plot <- ggsurv_obj$plot + theme(legend.position = "none")
 ggsurv_obj$data.survtable
-ggsave("km_plot_all_groups.png", ggsurv_obj$plot)
+ggsave("km_plot_all_groups.png", ggsurv_obj$plot) # please save plots in outdir
 
 
 # Create a new dataset for vaccine coverage
 
 # Calculate the survival probability and coverage
-surv_table <- surv_table %>%
+surv_table <- surv_table %>% # the object surv_table doesn't exist?
   mutate(surv = (n.risk - n.event) / n.risk,
          coverage = 1 - surv)
 
@@ -125,7 +125,7 @@ for (ethnicity in ethnicities) {
                      theme = theme_classic2())
   
   # Save the plot to a file
-  ggsave(paste0("km_plot_", gsub(" ", "_", ethnicity), ".png"), plot$plot)
+  ggsave(paste0("km_plot_", gsub(" ", "_", ethnicity), ".png"), plot$plot) # please save plots in outdir
 }
 
 ##########
