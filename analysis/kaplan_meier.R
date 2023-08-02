@@ -67,7 +67,7 @@ surv_table <- surv_table %>% # the object surv_table doesn't exist?
          coverage = 1 - surv)
 # Filter the survival table to only keep time = 12 weeks or 26 weeks
 data_coverage <- surv_table %>%
-  filter(time %in% c(12*7, 26*7)) %>%
+  filter(time %in% c(12*7, 26*7)) %>% # check what's happening here - are you sure ggsurv_obj$data.survtable is the right item to extract?
   select(strata, time, coverage)
 # Write the data to a CSV file
 write_csv(
