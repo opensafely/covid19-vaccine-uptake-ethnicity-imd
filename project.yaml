@@ -61,9 +61,4 @@ actions:
     outputs:
       moderately_sensitive:
         vaccine_coverage: output/kaplan_meier/vaccine_coverage_midpoint6.csv
-        km_plot_all_groups: output/kaplan_meier/km_plot_all_*.png
-        km_plot_asian: output/kaplan_meier/km_plot_Asian*.png
-        km_plot_black: output/kaplan_meier/km_plot_Black*.png
-        km_plot_mixed: output/kaplan_meier/km_plot_Mixed*.png
-        km_plot_other: output/kaplan_meier/km_plot_Other*.png
-        km_plot_white: output/kaplan_meier/km_plot_White*.png
+        km_plot_*: output/kaplan_meier/km_plot_*.png
