@@ -63,13 +63,27 @@ surv_table <- ggsurv_obj$data.survplot
 data_coverage <- surv_table %>%
   filter(time %in% c(12*7, 26*7)) %>%
   mutate(coverage = 1 - surv) %>%
-  select(strata, time, coverage, n.event, n.censor, std.err)
-# Write the data to a CSV file
-write_csv(
-  data_coverage,
-  file.path(outdir, glue::glue("vaccine_coverage_midpoint{threshold}.csv"))
-)
+  mutate(
+    # we also need to transform the confidence intervals to the coverage scale
+    # TODO please also do this for each of the covariates in the loop below
+    coverage.lower = 1 - upper,
+    coverage.upper = 1 - lower
+  ) %>%
+  select(
+    # post processing will be easier if we extract the raw variables rather than "strata"
+    ethnicity, imd_Q5, 
+    time, coverage, n.event, n.censor, std.err, 
+    # extract the confidence intervals for coverage 
+    # (please do this for the covariates below too)
+    coverage.lower, coverage.upper 
+    )
 
+# TODO
+# Please calculate the cumulative number of events and censors up to the two 
+# timepoints (12*7, 26*7). You can do this using the function cumsum() to 
+# calculate the cumulative number at each timepoint before you apply the line
+# "filter(time %in% c(12*7, 26*7)) %>%". Remember to do it for each covariate in 
+# the code below too.
 
 ##########
 # Examining other covariates
@@ -96,17 +110,28 @@ for (covariate in additional_covariates) {
   # Create the survival table
   surv_table <- ggsurv_obj$data.survplot
   # Filter to keep time for 12 weeks and 26 weeks
-  data_coverage <- surv_table %>%
+  data_coverage_list[[covariate]] <- surv_table %>%
     filter(time %in% c(12*7, 26*7)) %>%
     mutate(coverage = 1 - surv) %>%
-    select(strata, time, coverage, n.event, n.censor, std.err)
+    # save the name of the covariate as a column in the dataset
+    mutate(covariate = covariate) %>%
+    # rename the covariate column to "level"
+    rename(level = !!sym(covariate)) %>%
+    select(
+      ethnicity, imd_Q5, covariate, level, 
+      time, coverage, n.event, n.censor, std.err
+      )
   
-  # Add the data_coverage data frame to the list
-  data_coverage_list[[covariate]] <- data_coverage
 }
 
 # Bind all the data_coverage data frames together
 data_coverage_all <- bind_rows(data_coverage_list, .id = "covariate")
+# also bind to the previous one so you can save them all in one file to make
+# it easier for the output checker
+data_coverage_all <- bind_rows(
+  data_coverage, # results for just ethnicity and imd
+  data_coverage_all # results with additional variables
+) %>% as_tibble()
 
 # Write the data to a CSV file
 write_csv(
