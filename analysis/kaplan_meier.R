@@ -78,6 +78,9 @@ write_csv(
 # Create a list of covariates
 additional_covariates <- c("region", "jcvi_group", "sex")
 
+# Create an empty list to store the data_coverage data frames
+data_coverage_list <- list()
+
 # Write a loop function
 for (covariate in additional_covariates) {
   # Create Survival object 
@@ -97,12 +100,19 @@ for (covariate in additional_covariates) {
     filter(time %in% c(12*7, 26*7)) %>%
     mutate(coverage = 1 - surv) %>%
     select(strata, time, coverage, n.event, n.censor, std.err)
-  # Write the data to a CSV file
-  write_csv(
-    data_coverage,
-    file.path(outdir, glue::glue("vaccine_coverage_", covariate, "_midpoint{threshold}.csv"))
-  )
+  
+  # Add the data_coverage data frame to the list
+  data_coverage_list[[covariate]] <- data_coverage
 }
+
+# Bind all the data_coverage data frames together
+data_coverage_all <- bind_rows(data_coverage_list, .id = "covariate")
+
+# Write the data to a CSV file
+write_csv(
+  data_coverage_all,
+  file.path(outdir, glue::glue("vaccine_coverage_all_midpoint{threshold}.csv"))
+)
 
 ##########
 ##########
