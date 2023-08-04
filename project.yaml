@@ -60,6 +60,5 @@ actions:
     - process_extract
     outputs:
       moderately_sensitive:
-        vaccine_coverage: output/kaplan_meier/vaccine_coverage_midpoint6.csv
         vaccine_coverage_all: output/kaplan_meier/vaccine_coverage_all_midpoint6.csv
         km_plot_*: output/kaplan_meier/km_plot_*.png
