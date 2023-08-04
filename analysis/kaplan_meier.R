@@ -70,6 +70,43 @@ write_csv(
   file.path(outdir, glue::glue("vaccine_coverage_midpoint{threshold}.csv"))
 )
 
+
+##########
+# Examining other covariates
+##########
+
+# Create a list of covariates
+additional_covariates <- c("region", "jcvi_group", "sex")
+
+# Write a loop function
+for (covariate in additional_covariates) {
+  # Create Survival object 
+  surv_obj <- Surv(time = data_surv$tte, event = data_surv$status)
+  # Fit survival model for each ethnicity, IMD and covariates
+  fit <- survfit(as.formula(paste("surv_obj ~ ethnicity + imd_Q5 +", covariate)), data = data_surv)
+  # Plot the survival curves 
+  ggsurv_obj <- ggsurvplot(fit, data = data_surv, risk.table = TRUE)
+  # Extract the plot from ggsurv_obj, then save the plot
+  ggsurv_obj$plot <- ggsurv_obj$plot + theme(legend.position = "none")
+  ggsave(file.path(outdir, paste0("km_plot_all_groups_", covariate, ".png")), ggsurv_obj$plot)
+  
+  # Create the survival table
+  surv_table <- ggsurv_obj$data.survplot
+  # Filter to keep time for 12 weeks and 26 weeks
+  data_coverage <- surv_table %>%
+    filter(time %in% c(12*7, 26*7)) %>%
+    mutate(coverage = 1 - surv) %>%
+    select(strata, time, coverage, n.event, n.censor, std.err)
+  # Write the data to a CSV file
+  write_csv(
+    data_coverage,
+    file.path(outdir, glue::glue("vaccine_coverage_", covariate, "_midpoint{threshold}.csv"))
+  )
+}
+
+##########
+##########
+
 # Create 5 plots: one for each 
 
 # List of unique ethnicities
@@ -88,34 +125,6 @@ for (ethnicity in ethnicities) {
   # Save the plot to a file
   ggsave(file.path(outdir, paste0("km_plot_", gsub(" ", "_", ethnicity), ".png")), plot$plot)
 }
-
-
-
-#########
-# Functions
-#########
-
-# Function to fit and plot Kaplan-Meier survival model for each unique value of the first covariate
-fit_and_plot_kaplan_meier <- function(data, covariates) {
-  groups <- unique(data[[covariates[1]]])  # Get the unique values of the first covariate
-  for (group in groups) { # Create a plot for each unique value
-    data_subset <- data[data[[covariates[1]]] == group, ]
-    surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
-    formula <- as.formula(paste("surv_obj ~", paste(covariates[-1], collapse = " + ")))
-    fit <- survfit(formula, data = data_subset)
-    plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
-                       title = paste("Kaplan-Meier plot for", group),
-                       xlab = "Time (days)", ylab = "Survival probability",
-                       legend.title = "IMD Quintile",
-                       palette = "jco",
-                       theme = theme_classic2())
-    # Save the plot to a file
-    ggsave(file.path(outdir, paste0("km_plot_", gsub(" ", "_", group), ".png")), plot$plot)
-  }
-}
-
-# Use the function
-fit_and_plot_kaplan_meier(data_surv, c("ethnicity", "region"))
 
 
 # the following code does not calculate Kaplan-Meier estimates, 
