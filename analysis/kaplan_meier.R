@@ -95,13 +95,25 @@ data_coverage_list <- list()
 
 # Loop function
 for (covariate in additional_covariates) {
+  # Create Survival object inside the loop
+  surv_obj <- Surv(time = data_surv$tte, event = data_surv$status)
+  
+  # Fit survival model for each ethnicity, IMD, and covariates
+  fit <- survfit(as.formula(paste("surv_obj ~ ethnicity + imd_Q5 +", covariate)), data = data_surv)
+  
+  # Plot the survival curves 
+  ggsurv_obj <- ggsurvplot(fit, data = data_surv, risk.table = TRUE)
+  
   # Create the survival table
   surv_table <- ggsurv_obj$data.survplot %>%
-    # Calculate the cumulative number of events and censors
+    # Group by the specified covariates
+    group_by(ethnicity, imd_Q5, !!sym(covariate)) %>%
+    # Calculate the cumulative number of events and censors within groups
     mutate(
       cum_n.event = cumsum(n.event),
       cum_n.censor = cumsum(n.censor)
-    )
+    ) %>%
+    ungroup() 
   
   # Filter to keep time for 12 weeks and 26 weeks
   data_coverage_list[[covariate]] <- surv_table %>%
@@ -120,8 +132,8 @@ for (covariate in additional_covariates) {
       time, coverage, cum_n.event, cum_n.censor, std.err,
       coverage.lower, coverage.upper
     )
-  
 }
+
 
 
 # Bind all the data_coverage data frames together
