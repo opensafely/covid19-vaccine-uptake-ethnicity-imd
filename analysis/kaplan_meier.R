@@ -51,32 +51,34 @@ fit_ethnicity_imd <- survfit(surv_obj ~ ethnicity + imd_Q5, data = data_surv)
 # Plot the survival curves for each ethnicity and IMD subgroup
 ggsurv_obj <- ggsurvplot(fit_ethnicity_imd, data = data_surv, risk.table = TRUE)
 
-# Extract the plot from ggsurv_obj and get rid of the legend using `+ ggplot2::theme()`, then save the plot
+# Extract the plot from ggsurv_ob, then save the plot
 ggsurv_obj$plot <- ggsurv_obj$plot + theme(legend.position = "none")
 ggsave(file.path(outdir, "km_plot_all_groups.png"), ggsurv_obj$plot)
 
 # Create a new dataset for vaccine coverage
 
 # Create the survival table
-surv_table <- ggsurv_obj$data.survplot
-# Filter the survival table to only keep time for 12 weeks and 26 weeks
+surv_table <- ggsurv_obj$data.survplot %>%
+  # Calculate the cumulative number of events and censors
+  mutate(
+    cum_n.event = cumsum(n.event),
+    cum_n.censor = cumsum(n.censor)
+  )
+
+# Filter the survival table keep time for 12 weeks and 26 weeks
 data_coverage <- surv_table %>%
   filter(time %in% c(12*7, 26*7)) %>%
-  mutate(coverage = 1 - surv) %>%
   mutate(
-    # we also need to transform the confidence intervals to the coverage scale
-    # TODO please also do this for each of the covariates in the loop below
+    coverage = 1 - surv,
     coverage.lower = 1 - upper,
     coverage.upper = 1 - lower
   ) %>%
   select(
-    # post processing will be easier if we extract the raw variables rather than "strata"
     ethnicity, imd_Q5, 
-    time, coverage, n.event, n.censor, std.err, 
-    # extract the confidence intervals for coverage 
-    # (please do this for the covariates below too)
+    time, coverage, cum_n.event, cum_n.censor, std.err, 
     coverage.lower, coverage.upper 
-    )
+  )
+
 
 # TODO
 # Please calculate the cumulative number of events and censors up to the two 
@@ -85,44 +87,42 @@ data_coverage <- surv_table %>%
 # "filter(time %in% c(12*7, 26*7)) %>%". Remember to do it for each covariate in 
 # the code below too.
 
-##########
-# Examining other covariates
-##########
-
 # Create a list of covariates
 additional_covariates <- c("region", "jcvi_group", "sex")
 
 # Create an empty list to store the data_coverage data frames
 data_coverage_list <- list()
 
-# Write a loop function
+# Loop function
 for (covariate in additional_covariates) {
-  # Create Survival object 
-  surv_obj <- Surv(time = data_surv$tte, event = data_surv$status)
-  # Fit survival model for each ethnicity, IMD and covariates
-  fit <- survfit(as.formula(paste("surv_obj ~ ethnicity + imd_Q5 +", covariate)), data = data_surv)
-  # Plot the survival curves 
-  ggsurv_obj <- ggsurvplot(fit, data = data_surv, risk.table = TRUE)
-  # Extract the plot from ggsurv_obj, then save the plot
-  ggsurv_obj$plot <- ggsurv_obj$plot + theme(legend.position = "none")
-  ggsave(file.path(outdir, paste0("km_plot_all_groups_", covariate, ".png")), ggsurv_obj$plot)
-  
   # Create the survival table
-  surv_table <- ggsurv_obj$data.survplot
+  surv_table <- ggsurv_obj$data.survplot %>%
+    # Calculate the cumulative number of events and censors
+    mutate(
+      cum_n.event = cumsum(n.event),
+      cum_n.censor = cumsum(n.censor)
+    )
+  
   # Filter to keep time for 12 weeks and 26 weeks
   data_coverage_list[[covariate]] <- surv_table %>%
     filter(time %in% c(12*7, 26*7)) %>%
-    mutate(coverage = 1 - surv) %>%
-    # save the name of the covariate as a column in the dataset
+    mutate(
+      coverage = 1 - surv,
+      coverage.lower = 1 - upper,
+      coverage.upper = 1 - lower
+    ) %>%
+    # Save the covariate as a column in the dataset
     mutate(covariate = covariate) %>%
-    # rename the covariate column to "level"
+    # Rename the covariate column to "level"
     rename(level = !!sym(covariate)) %>%
     select(
       ethnicity, imd_Q5, covariate, level, 
-      time, coverage, n.event, n.censor, std.err
-      )
+      time, coverage, cum_n.event, cum_n.censor, std.err,
+      coverage.lower, coverage.upper
+    )
   
 }
+
 
 # Bind all the data_coverage data frames together
 data_coverage_all <- bind_rows(data_coverage_list, .id = "covariate")
