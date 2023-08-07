@@ -59,11 +59,14 @@ ggsave(file.path(outdir, "km_plot_all_groups.png"), ggsurv_obj$plot)
 
 # Create the survival table
 surv_table <- ggsurv_obj$data.survplot %>%
+  # Group by the specified covariates
+  group_by(ethnicity, imd_Q5) %>%
   # Calculate the cumulative number of events and censors
   mutate(
     cum_n.event = cumsum(n.event),
     cum_n.censor = cumsum(n.censor)
-  )
+  ) %>%
+  ungroup()
 
 # Filter the survival table keep time for 12 weeks and 26 weeks
 data_coverage <- surv_table %>%
