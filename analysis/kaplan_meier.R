@@ -136,7 +136,9 @@ data_coverage_all <- bind_rows(data_coverage_list, .id = "covariate")
 data_coverage_all <- bind_rows(
   data_coverage, # results for just ethnicity and imd
   data_coverage_all # results with additional variables
-) %>% as_tibble()
+) %>% 
+  # apply midpoint rounding to cum_n.* variables
+  mutate(across(starts_with("cum_n"), ~roundmid_any(.x, to = threshold)))
 
 # Write the data to a CSV file
 write_csv(
