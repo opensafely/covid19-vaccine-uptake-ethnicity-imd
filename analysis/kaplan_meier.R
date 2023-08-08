@@ -146,24 +146,24 @@ write_csv(
   file.path(outdir, glue::glue("vaccine_coverage_all_midpoint{threshold}.csv"))
 )
 
-##########
-##########
-
-# Create 5 plots: one for each 
-
-# List of unique ethnicities
-ethnicities <- unique(data_surv$ethnicity)
-# Create a plot for each ethnicity
-for (ethnicity in ethnicities) {
-  data_subset <- data_surv[data_surv$ethnicity == ethnicity, ]
-  surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
-  fit <- survfit(surv_obj ~ imd_Q5, data = data_subset)
-  plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
-                     title = paste("Kaplan-Meier plot for", ethnicity),
-                     xlab = "Time (days)", ylab = "Survival probability",
-                     legend.title = "IMD Quintile",
-                     palette = "jco",
-                     theme = theme_classic2())
-  # Save the plot to a file
-  ggsave(file.path(outdir, paste0("km_plot_", gsub(" ", "_", ethnicity), ".png")), plot$plot)
-}
+# ##########
+# ##########
+# 
+# # Create 5 plots: one for each 
+# 
+# # List of unique ethnicities
+# ethnicities <- unique(data_surv$ethnicity)
+# # Create a plot for each ethnicity
+# for (ethnicity in ethnicities) {
+#   data_subset <- data_surv[data_surv$ethnicity == ethnicity, ]
+#   surv_obj <- Surv(time = data_subset$tte, event = data_subset$status)
+#   fit <- survfit(surv_obj ~ imd_Q5, data = data_subset)
+#   plot <- ggsurvplot(fit, data = data_subset, risk.table = TRUE,
+#                      title = paste("Kaplan-Meier plot for", ethnicity),
+#                      xlab = "Time (days)", ylab = "Survival probability",
+#                      legend.title = "IMD Quintile",
+#                      palette = "jco",
+#                      theme = theme_classic2())
+#   # Save the plot to a file
+#   ggsave(file.path(outdir, paste0("km_plot_", gsub(" ", "_", ethnicity), ".png")), plot$plot)
+# }
