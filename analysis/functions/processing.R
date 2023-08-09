@@ -14,7 +14,10 @@ add_time_vars <- function(.data) {
 add_age_jcvi_group <- function(.data) {
   .data %>%
     mutate(
-      age_jcvi_group = cut(age_jcvi, c(18,seq(25,80,by=5), 120), right = FALSE)
+      age_jcvi_group = cut(
+        age_jcvi, c(18,seq(25,80,by=5), 120),
+        right = FALSE, include.lowest = TRUE
+        )
     )
 }
 
