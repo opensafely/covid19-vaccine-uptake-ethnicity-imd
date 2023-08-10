@@ -61,9 +61,9 @@ tribble(
     "02", "age_1 >=80",
     "03", "age_1 >=75",
     "04a", "age_1 >=70",
-    "04b", "cev_group AND age_1 >=16",
+    "04b", "cev_group AND age_1 >=16", # TODO change to age_1 >= 18
     "05", "age_1 >=65",
-    "06", "atrisk_group AND age_1 >=16",
+    "06", "atrisk_group AND age_1 >=16", # TODO change to age_1 >= 18
     "07", "age_1 >=60",
     "08", "age_1 >=55",
     "09", "age_1 >=50",
