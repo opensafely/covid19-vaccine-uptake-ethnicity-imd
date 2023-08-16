@@ -321,19 +321,35 @@ for (ethnicity in ethnicities) {
 
 
 
+data_surv %>%
+  filter(is.na(covariate)) %>%
+  ggplot(
+    aes(
+      x = time, y = coverage,
+      colour = imd_Q5
+    )
+  ) +
+  geom_errorbar(
+    aes(ymin = coverage.lower, ymax = coverage.upper),
+    width = 10
+    ) +
+  geom_point(size = 1) +
+  geom_line() +
+  facet_grid(cols = vars(ethnicity)) +
+  scale_x_continuous(
+    breaks = c(84,182)
+  ) +
+  scale_colour_viridis_d() + 
+  labs(
+    x = "Days since eligible"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# TODO
+# split by the covariates adding them as rows in the facets
+# you might want to do this a few levels at a time for jcvi_group and region,
+# otherwise the plot will be quite hard to read
 
