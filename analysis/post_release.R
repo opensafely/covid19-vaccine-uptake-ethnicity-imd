@@ -53,7 +53,7 @@ ggsave(
   width = 10, 
   height = 8, 
   units = "in", 
-  dpi = 300 # High resolution for publication
+  dpi = 300 
 )
 
 
@@ -312,10 +312,8 @@ for (ethnicity in ethnicities) {
     ) +
     ggplot2::scale_color_brewer(palette = "Set1")
   
-  # Display the plot
-  print(plot)
   
-  # Save the plot to the same directory as specified in outdir
+  # Save the plot 
   ggplot2::ggsave(file.path(outdir, paste0("vaccine_coverage_", gsub(" ", "_", ethnicity), ".png")), plot, width = 10, height = 6, dpi = 300)
 }
 ###########
