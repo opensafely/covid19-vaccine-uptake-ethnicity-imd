@@ -130,19 +130,19 @@ create_bar_plot <- function(data, path) {
   
   p <- ggplot(data, aes(x = level, y = percent, fill = level)) +
     geom_bar(stat = "identity", color = "black", width = 0.7) + 
-    scale_fill_manual(values = fill_pal) 
+    scale_fill_manual(values = fill_pal) +
     facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
-    guides(fill = guide_legend(title = variable_name, byrow = TRUE)) +
+  
     theme_bw() + 
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       panel.border = element_rect(colour = "black", fill=NA, size=1),
-      legend.position = "bottom",
+      #legend.position = "bottom",
       plot.title = element_text(face="bold", hjust=0.5),
       axis.title.x = element_text(face="bold"),
       axis.title.y = element_text(face="bold"),
-      axis.text.x = element_text(angle = 45, hjust = 1) 
+      axis.text.x = element_blank() # Remove x-axis labels
     ) +
     labs(
       title = paste("Distribution of", variable_name, "by Ethnicity and IMD Quintile"),
@@ -225,57 +225,6 @@ dot_plots <- lapply(
 #############
 #############
 
-# Function for box plot
-create_box_plot <- function(data, path) {
-  variable_name <- unique(data$variable)
-  levels <- unique(data$level)
-  
-  # Use a more muted color palette
-  fill_pal <- colorRampPalette(c("lightblue", "darkblue"))(length(levels))
-  names(fill_pal) <- levels
-  
-  p <- ggplot(data, aes(x = level, y = percent, fill = level)) +
-    geom_boxplot(outlier.shape = NA) +  # Hide outliers for cleaner look
-    facet_grid(rows = vars(ethnicity), cols = vars(imd_Q5)) +
-    scale_fill_manual(values = fill_pal, name = variable_name) +
-    theme_bw() +  # Use a cleaner theme
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-      axis.text.y = element_text(size = 12),
-      axis.title.y = element_text(size = 14),
-      strip.text = element_text(size = 14, face = "bold"),
-      legend.position = "bottom",
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 14, face = "bold"),
-      plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
-      plot.subtitle = element_text(hjust = 0.5, size = 14)
-    ) +
-    labs(
-      x = NULL,
-      y = "Percentage (%)",
-      title = "COVID-19 Vaccination Uptake by Demographic Groups",
-      subtitle = paste("Stratified by", variable_name)
-    )
-  
-  ggsave(
-    filename = file.path(path, paste0("box_plot_", variable_name, ".png")),
-    plot = p,
-    width = 10, 
-    height = 6,
-    units = "in", 
-    dpi = 300
-  )
-  return(p)
-}
-
-list_of_data <- split(data_bar_plots, data_bar_plots$variable)
-
-# Create box plots
-box_plots <- lapply(
-  seq_along(list_of_data), 
-  function(x) create_box_plot(list_of_data[[x]], path = outdir)
-)
-
 #############
 #############
 
@@ -322,7 +271,7 @@ for (ethnicity in ethnicities) {
 
 
 data_surv %>%
-  filter(is.na(covariate)) %>%
+  filter(covariate == 'ethnicity') %>%    #covariate == 'jcvi_groups', level %in% c(1,2,3)) %>%
   ggplot(
     aes(
       x = time, y = coverage,
@@ -335,7 +284,7 @@ data_surv %>%
     ) +
   geom_point(size = 1) +
   geom_line() +
-  facet_grid(cols = vars(ethnicity)) +
+  facet_grid(col = vars(ethnicity)) + #rows = vars(ethnicity)
   scale_x_continuous(
     breaks = c(84,182)
   ) +
@@ -348,8 +297,49 @@ data_surv %>%
     legend.position = "bottom"
   )
 
+# Save the plot 
+ggsave(
+  file.path(outdir, "vax_coverage_sex.png"),
+  width = 10, 
+  height = 8, 
+  units = "in", 
+  dpi = 300 
+)
+
+
+
 # TODO
 # split by the covariates adding them as rows in the facets
 # you might want to do this a few levels at a time for jcvi_group and region,
 # otherwise the plot will be quite hard to read
 
+
+# Create the plot
+plot <- data_surv %>%
+  filter(is.na(covariate)) %>%
+  ggplot(
+    aes(
+      x = time, y = coverage,
+      colour = imd_Q5
+    )
+  ) +
+  geom_errorbar(
+    aes(ymin = coverage.lower, ymax = coverage.upper),
+    width = 10
+  ) +
+  geom_point(size = 1) +
+  geom_line() +
+  facet_grid(rows = vars(jcvi_group), cols = vars(ethnicity)) + # Faceting by jcvi_group
+  scale_x_continuous(
+    breaks = c(84,182)
+  ) +
+  scale_colour_viridis_d() + 
+  labs(
+    x = "Days since eligible"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
+ 
+print(plot)
