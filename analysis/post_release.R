@@ -271,7 +271,7 @@ for (ethnicity in ethnicities) {
 
 
 data_surv %>%
-  filter(covariate == 'ethnicity') %>%    #covariate == 'jcvi_groups', level %in% c(1,2,3)) %>%
+  filter(covariate == 'jcvi_group', level %in% c("10","11","12")) %>%   #grouping for younger population
   ggplot(
     aes(
       x = time, y = coverage,
@@ -343,3 +343,32 @@ plot <- data_surv %>%
   )
  
 print(plot)
+
+
+
+############
+############
+
+#flowchart summary table
+
+flowchart <- readr::read_csv(
+  file.path(outdir, glue("flowchart_midpoint{threshold}.csv"))
+)
+  
+# Load the gtsummary package
+library(ggplot2)
+library(grid)
+
+
+sum_table <- flowchart[, c("criteria", "n", "n_exclude")]
+
+# Convert the data frame to a table grob
+table_grob <- gridExtra::tableGrob(sum_table, rows = NULL) 
+
+# Save the table as a PNG image
+png(filename = paste0(outdir, "/sum_table.png"), width = 800, height = 600)
+grid.draw(table_grob)
+dev.off()
+
+
+
