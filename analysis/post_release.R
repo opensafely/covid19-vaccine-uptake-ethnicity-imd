@@ -1,7 +1,6 @@
 # install.packages("RColorBrewer")
 
 
-
 library(survival)
 library(survminer)
 library(readxl)
@@ -10,11 +9,36 @@ library(ggplot2)
 library(tidyverse)
 library(here)
 library(viridis)
+library(dplyr)
+library(tidyr)
+library(grid)
 
 # Source metadata and functions
 source(here("analysis", "design.R"))
 
 outdir <- here("release20230809")
+
+#############
+
+# Define the jcvi_groups
+jcvi_groups <- 
+  tribble(
+    ~group, ~definition,
+    "01", "longres And age > 65",
+    "02", "age >=80",
+    "03", "age >=75",
+    "04a", "age >=70",
+    "04b", "cev_group AND age >=18", 
+    "05", "age >=65",
+    "06", "atrisk_group AND age >=18", 
+    "07", "age >=60",
+    "08", "age >=55",
+    "09", "age >=50",
+    "10", "age >=40",
+    "11", "age >=30",
+    "12", "age >=18",
+    "99", "DEFAULT",
+  )
 
 # Read the data 
 data_vax_counts <- readr::read_csv(
@@ -22,11 +46,15 @@ data_vax_counts <- readr::read_csv(
 ) %>%
   mutate(across(elig_date_rank, ~as.factor(.x)))
 
+# Join with jcvi_groups to get the definition for each group
+data_vax_counts <- left_join(data_vax_counts, jcvi_groups, by = c("jcvi_group" = "group"))
+
 # Plot using geom_line()
 p <- data_vax_counts %>%
   ggplot(aes(x = covid_vax_disease_1_time, y = n, color = elig_date_rank)) +
   geom_line(size=1) + 
-  facet_wrap(~jcvi_group, scales = "free_y", nrow = 4) +
+  # Use the definition variable for the facet labels
+  facet_wrap(~definition, scales = "free_y", nrow = 4) +
   scale_color_viridis_d(name="Eligibility Date Rank") +
   theme_bw() + 
   theme(
@@ -45,8 +73,6 @@ p <- data_vax_counts %>%
     y = "Number of Patients Vaccinated"
   )
 
-print(p)
-
 # Save the plot 
 ggsave(
   file.path(outdir, "vax_dates_line.png"),
@@ -57,7 +83,7 @@ ggsave(
 )
 
 
-#############
+
 #############
 
 
@@ -290,7 +316,8 @@ data_surv %>%
   ) +
   scale_colour_viridis_d() + 
   labs(
-    x = "Days since eligible"
+    x = "Days since eligible",
+    title = "Vaccine Coverage in London by Ethnicity and IMD Quintile"
   ) +
   theme_minimal() +
   theme(
@@ -299,12 +326,79 @@ data_surv %>%
 
 # Save the plot 
 ggsave(
-  file.path(outdir, "vax_coverage_sex.png"),
+  file.path(outdir, "vax_coverage_title.png"),
   width = 10, 
   height = 8, 
   units = "in", 
   dpi = 300 
 )
+###########
+###########
+
+data_surv %>%
+  filter(covariate == 'jcvi_group', level %in% c("01","02","03","04","05")) %>%
+  group_by(time, imd_Q5, ethnicity) %>%
+  summarise(
+    mean_coverage = mean(coverage, na.rm = TRUE),
+    coverage_lower = mean(coverage.lower, na.rm = TRUE),
+    coverage_upper = mean(coverage.upper, na.rm = TRUE),
+    .groups = 'drop' # This line takes care of the warning about grouped output
+  ) %>%
+  ggplot(
+    aes(
+      x = time, y = mean_coverage,
+      colour = imd_Q5
+    )
+  ) +
+  geom_errorbar(
+    aes(ymin = coverage_lower, ymax = coverage_upper),
+    width = 10
+  ) +
+  geom_point(size = 1) +
+  geom_line() +
+  facet_grid(col = vars(ethnicity)) +
+  scale_x_continuous(
+    breaks = c(84,182)
+  ) +
+  scale_colour_viridis_d() + 
+  labs(
+    x = "Days since eligible",
+    title = "Vaccine Coverage in Adults >65 by Ethnicity and IMD Quintile"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
+
+ggsave(
+  file.path(outdir, "vax_coverage_Age_65.png"),
+  width = 10, 
+  height = 8, 
+  units = "in", 
+  dpi = 300 
+)
+################
+################
+
+summary_by_ethnicity <- data_surv %>%
+  group_by(ethnicity) %>%
+  summarise(
+    mean_coverage = mean(coverage, na.rm = TRUE),
+    sd_coverage = sd(coverage, na.rm = TRUE),
+    min_coverage = min(coverage, na.rm = TRUE),
+    max_coverage = max(coverage, na.rm = TRUE),
+    mean_coverage_lower = mean(coverage.lower, na.rm = TRUE),
+    mean_coverage_upper = mean(coverage.upper, na.rm = TRUE),
+    .groups = 'drop' 
+  )
+
+summary_by_ethnicity
+
+
+
+
+
+
 
 
 
@@ -354,13 +448,12 @@ print(plot)
 flowchart <- readr::read_csv(
   file.path(outdir, glue("flowchart_midpoint{threshold}.csv"))
 )
-  
-# Load the gtsummary package
-library(ggplot2)
-library(grid)
 
 
-sum_table <- flowchart[, c("criteria", "n", "n_exclude")]
+sum_table <- flowchart[, c("criteria", "n", "n_exclude", "pct_exclude")]
+
+# Convert the percentage 
+sum_table$pct_exclude <- sum_table$pct_exclude * 100
 
 # Convert the data frame to a table grob
 table_grob <- gridExtra::tableGrob(sum_table, rows = NULL) 
