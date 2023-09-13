@@ -106,7 +106,8 @@ if (any(unlist(check_groups) > 0)) {
 data_processed <- data_processed %>%
   mutate(
     # create variables for applying the eligibility criteria
-    aged_over_18 = age_2 >=18,
+    aged_over_18_grp_12 = (age_2 >= 18) & (jcvi_group %in% "12"),
+    aged_over_18_grps_04b_06 = (age_1 >= 18) & (jcvi_group %in% c("04b", "6")),
     alive_on_elig_date = is.na(death_date) | elig_date <= death_date,
     aged_under_120 = age_2 < 120,
     no_vax_before_start = is.na(covid_vax_disease_1_date) | as.Date(study_parameters$start_date) <= covid_vax_disease_1_date,
@@ -117,8 +118,8 @@ data_processed <- data_processed %>%
     # apply the eligibility criteria
     c0_descr = "All patients in OpenSAFELY-TPP",
     c0 = TRUE,
-    c1_descr = glue("   aged 18 years or over on {study_parameters$ref_age_2}"),
-    c1 = c0 & aged_over_18,
+    c1_descr = glue("   aged 18 years or over by {study_parameters$ref_age_2}"),
+    c1 = c0 & (aged_over_18_grp_12 | aged_over_18_grps_04b_06),
     c2_descr = "   alive at start of eligibility date",
     c2 = c1 & alive_on_elig_date,
     c3_descr = "   registered with one TPP general practice between 2020-01-01 and start of eligibility date",
